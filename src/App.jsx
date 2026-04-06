@@ -72,7 +72,7 @@ export default function App() {
           </div>
           <div style={{flex:1}}/>
           <nav style={{display:"flex",gap:4}}>
-            {[["outlets","Outlets"],["entry","Data Entry"],["reports","Reports"]].map(([k,l])=>(
+            {[["reports","Dashboard"],["entry","Data Entry"],["outlets","Outlets"],["best","Best Practices"]].map(([k,l])=>(
               <button key={k} onClick={()=>setTab(k)} style={{padding:"8px 18px",borderRadius:8,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?600:500,background:tab===k?C.primary:"transparent",color:tab===k?"#fff":C.textLight}}>
                 {l}
               </button>
@@ -81,9 +81,10 @@ export default function App() {
         </div>
       </div>
       <div style={{maxWidth:1080,margin:"0 auto",padding:"24px 20px"}}>
-        {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
-        {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
         {tab==="reports" && <ReportsPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
+        {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
+        {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
+        {tab==="best" && <BestPracticesPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
       </div>
     </div>
   );
@@ -627,13 +628,13 @@ function ReportsPage({outlets, entries, dailyEntries }) {
     </div>
   );
 
-  const varColor=isPos(totalActual,totalBudget)?"#16a34a":"#dc2626";
+  const varColor=isPos(totalActual,totalBudget)?C.positive:C.negative;
   const catTotal=catData.reduce((s,c)=>s+c.val,0);
 
   return(
     <div>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:18}}>
-        <PH title="Reports" sub="MIS overview — all outlets and periods" noMb/>
+        <PH title="Dashboard" sub="MIS overview — all outlets and periods" noMb/>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <select value={filterOutlet} onChange={e=>setFilterOutlet(e.target.value)} style={{...selStyle,width:"auto",minWidth:150}}>
             <option value="all">All outlets</option>
@@ -753,3 +754,129 @@ function Lbl({children}){return <div style={{fontSize:11,fontWeight:600,color:C.
 function SB({bg,col,onClick,children}){return <button onClick={onClick} style={{background:bg,color:col,border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:600,cursor:"pointer"}}>{children}</button>;}
 const iStyle={border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,outline:"none",background:C.inputBg,color:C.text};
 const selStyle={border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,outline:"none",background:C.card,cursor:"pointer",color:C.text};
+
+function BestPracticesPage({outlets, entries, dailyEntries}) {
+  const aggregated = useMemo(() => {
+    const map = {};
+    entries.forEach(e => {
+      const key = `${e.outletId}-${e.year}-${e.month}`;
+      if (!map[key]) map[key] = { outletId: e.outletId, month: e.month, year: e.year, bevActual: 0, liqActual: 0, foodActual: 0, scActual: 0, covers: 0 };
+      map[key].bevActual += e.bevActual;
+      map[key].liqActual += e.liqActual;
+      map[key].foodActual += e.foodActual;
+      map[key].scActual += e.scActual;
+      map[key].covers += e.covers;
+    });
+    dailyEntries.forEach(e => {
+      const d = new Date(e.date);
+      const key = `${e.outletId}-${d.getFullYear()}-${d.getMonth() + 1}`;
+      if (!map[key]) map[key] = { outletId: e.outletId, month: d.getMonth() + 1, year: d.getFullYear(), bevActual: 0, liqActual: 0, foodActual: 0, scActual: 0, covers: 0 };
+      map[key].bevActual += e.bevActual;
+      map[key].liqActual += e.liqActual;
+      map[key].foodActual += e.foodActual;
+      map[key].scActual += e.scActual;
+      map[key].covers += e.covers;
+    });
+    return Object.values(map);
+  }, [entries, dailyEntries]);
+
+  const insights = useMemo(() => {
+    const list = [];
+    if (aggregated.length === 0) return list;
+
+    const totalRev = aggregated.reduce((s, e) => s + e.bevActual + e.liqActual + e.foodActual + e.scActual, 0);
+    const totalCovers = aggregated.reduce((s, e) => s + e.covers, 0);
+    const avgCheck = totalCovers > 0 ? totalRev / totalCovers : 0;
+
+    list.push({ type: "info", title: "Average Check Size", desc: `₹${fmtMono(Math.round(avgCheck))} per cover across all outlets` });
+
+    const byOutlet = outlets.map(o => {
+      const oData = aggregated.filter(e => e.outletId === o.id);
+      const rev = oData.reduce((s, e) => s + e.bevActual + e.liqActual + e.foodActual + e.scActual, 0);
+      const covers = oData.reduce((s, e) => s + e.covers, 0);
+      return { name: o.name, rev, covers, check: covers > 0 ? rev / covers : 0 };
+    }).filter(o => o.rev > 0);
+
+    const topOutlet = byOutlet.sort((a, b) => b.rev - a.rev)[0];
+    if (topOutlet) {
+      list.push({ type: "success", title: "Top Performer", desc: `${topOutlet.name} with ₹${fmt(topOutlet.rev)} revenue` });
+    }
+
+    const lowOutlet = byOutlet.sort((a, b) => a.check - b.check)[0];
+    if (lowOutlet && byOutlet.length > 1) {
+      list.push({ type: "warning", title: "Lowest Avg Check", desc: `${lowOutlet.name} at ₹${fmtMono(Math.round(lowOutlet.check))} per cover` });
+    }
+
+    const beverageShare = aggregated.reduce((s, e) => s + e.bevActual, 0) / totalRev * 100;
+    const foodShare = aggregated.reduce((s, e) => s + e.foodActual, 0) / totalRev * 100;
+    if (foodShare > beverageShare) {
+      list.push({ type: "info", title: "Revenue Mix", desc: `Food contributes ${Math.round(foodShare)}% vs Beverage ${Math.round(beverageShare)}%` });
+    }
+
+    return list;
+  }, [aggregated, outlets]);
+
+  const benchmarks = [
+    { label: "Target APC", value: "₹2,500-3,500", desc: "Average per cover for F&B" },
+    { label: "Food to Bev Ratio", value: "2:1", desc: "Food revenue should be 2x beverages" },
+    { label: "Labor Cost", value: "<25%", desc: "Target staff cost as % of revenue" },
+    { label: "Rent to Rev", value: "<8%", desc: "Rent should be under 8% of revenue" },
+  ];
+
+  return (
+    <div>
+      <PH title="Best Practices" sub="Industry benchmarks and AI-generated insights"/>
+      
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+        <Card>
+          <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>AI Insights</div>
+          {insights.length === 0 ? (
+            <div style={{color:C.textMuted,fontSize:13,padding:"20px 0",textAlign:"center"}}>Add data to see AI-powered insights</div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {insights.map((ins, i) => (
+                <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:12,background:ins.type === "warning" ? "#FFFBEB" : ins.type === "success" ? "#ECFDF5" : "#EFF6FF",borderRadius:8}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",marginTop:5,background:ins.type === "warning" ? "#F59E0B" : ins.type === "success" ? "#10B981" : "#3B82F6",flexShrink:0}}/>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{ins.title}</div>
+                    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{ins.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card>
+          <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>Industry Benchmarks</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {benchmarks.map((b, i) => (
+              <div key={i} style={{padding:14,background:C.inputBg,borderRadius:8}}>
+                <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",marginBottom:4}}>{b.label}</div>
+                <div style={{fontSize:16,fontWeight:600,color:C.primary}}>{b.value}</div>
+                <div style={{fontSize:11,color:C.textLight,marginTop:4}}>{b.desc}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>AI Recommendations</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+          <div style={{padding:16,background:"linear-gradient(135deg, #2D5A4A 0%, #3D6A5A 100%)",borderRadius:10,color:"#fff"}}>
+            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Forecasting</div>
+            <div style={{fontSize:13,fontWeight:500}}>Predict next month revenue based on trends</div>
+          </div>
+          <div style={{padding:16,background:"linear-gradient(135deg, #374151 0%, #4B5563 100%)",borderRadius:10,color:"#fff"}}>
+            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Anomaly Detection</div>
+            <div style={{fontSize:13,fontWeight:500}}>Alert on unusual spending patterns</div>
+          </div>
+          <div style={{padding:16,background:"linear-gradient(135deg, #BE123C 0%, #9F1239 100%)",borderRadius:10,color:"#fff"}}>
+            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Cost Optimization</div>
+            <div style={{fontSize:13,fontWeight:500}}>Find areas to reduce operational costs</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
