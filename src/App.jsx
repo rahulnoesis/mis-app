@@ -52,7 +52,7 @@ const C = {
 };
 
 export default function App() {
-  const [tab, setTab] = useState("entry");
+  const [tab, setTab] = useState("reports");
   const [outlets, setOutlets] = useState(SEED_OUTLETS);
   const [entries, setEntries] = useState(SEED_ENTRIES);
   const [dailyEntries, setDailyEntries] = useState([]);
