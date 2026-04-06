@@ -526,6 +526,8 @@ function CSVUpload({outlets,entries,setEntries,getId}){
 
 function ReportsPage({outlets, entries, dailyEntries }) {
   const [filterOutlet, setFilterOutlet] = useState("all");
+  const [showAI, setShowAI] = useState(false);
+  const [showForecast, setShowForecast] = useState(false);
 
   const aggregatedEntries = useMemo(() => {
     const map = {};
@@ -635,13 +637,18 @@ function ReportsPage({outlets, entries, dailyEntries }) {
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:18}}>
         <PH title="Dashboard" sub="MIS overview — all outlets and periods" noMb/>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={() => setShowAI(!showAI)} style={{background:showAI ? C.primary : C.card, color: showAI ? "#fff" : C.textLight, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer"}}>AI Query</button>
+          <button onClick={() => setShowForecast(!showForecast)} style={{background:showForecast ? C.primary : C.card, color: showForecast ? "#fff" : C.textLight, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer"}}>Forecast</button>
           <select value={filterOutlet} onChange={e=>setFilterOutlet(e.target.value)} style={{...selStyle,width:"auto",minWidth:150}}>
             <option value="all">All outlets</option>
             {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
-          <button onClick={exportCSV} style={{background:"#39544B",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Export CSV</button>
+          <button onClick={exportCSV} style={{background:C.primary,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Export</button>
         </div>
       </div>
+
+      {showAI && <div style={{marginBottom: 14}}><AIQueryPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/></div>}
+      {showForecast && <div style={{marginBottom: 14}}><ForecastPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/></div>}
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:14}}>
         <KCard label="Revenue YTD" val={fmtCr(totalActual)} sub={`${varPct(totalActual,totalBudget)} vs budget`} subC={varColor}/>
