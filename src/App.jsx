@@ -40,6 +40,7 @@ export default function App() {
   const [tab, setTab] = useState("entry");
   const [outlets, setOutlets] = useState(SEED_OUTLETS);
   const [entries, setEntries] = useState(SEED_ENTRIES);
+  const [dailyEntries, setDailyEntries] = useState([]);
   const [subTab, setSubTab] = useState("manual");
   const uid = useRef(200);
   const getId = () => String(uid.current++);
@@ -67,8 +68,8 @@ export default function App() {
       </div>
       <div style={{maxWidth:1080,margin:"0 auto",padding:"18px 20px"}}>
         {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
-        {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
-        {tab==="reports" && <ReportsPage outlets={outlets} entries={entries}/>}
+        {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
+        {tab==="reports" && <ReportsPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
       </div>
     </div>
   );
@@ -123,15 +124,16 @@ function OutletsPage({outlets,setOutlets,getId}){
   );
 }
 
-function EntryPage({outlets,entries,setEntries,subTab,setSubTab,getId}){
+function EntryPage({outlets,entries,setEntries,dailyEntries,setDailyEntries,subTab,setSubTab,getId}){
   return(
     <div>
-      <PH title="Data Entry" sub="Add monthly data per outlet — manual form or CSV upload"/>
+      <PH title="Data Entry" sub="Add daily or monthly data per outlet"/>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
-        {[["manual","Manual Entry"],["csv","CSV Upload"]].map(([k,l])=>(
+        {[["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"]].map(([k,l])=>(
           <button key={k} onClick={()=>setSubTab(k)} style={{padding:"6px 16px",borderRadius:8,border:`0.5px solid ${subTab===k?"#1e3a5f":"#e2e8f0"}`,background:subTab===k?"#1e3a5f":"#fff",color:subTab===k?"#fff":"#64748b",fontSize:12,fontWeight:subTab===k?600:400,cursor:"pointer"}}>{l}</button>
         ))}
       </div>
+      {subTab==="daily"&&<DailyEntry outlets={outlets} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
       {subTab==="manual"&&<ManualEntry outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
       {subTab==="csv"&&<CSVUpload outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
     </div>
@@ -228,6 +230,165 @@ function ManualEntry({outlets,entries,setEntries,getId}){
                 <div style={{fontSize:10,color:"#94a3b8"}}>{MONTHS[e.month-1]} {e.year}</div>
               </div>
               <div style={{fontSize:11,fontWeight:600,color:"#1e3a5f"}}>{fmt(total)}</div>
+            </div>
+          );
+        })}
+      </Card>
+    </div>
+  );
+}
+
+function DailyEntry({outlets, dailyEntries, setDailyEntries, getId}) {
+  const today = new Date().toISOString().split('T')[0];
+  const blank = { outletId: "", date: today, bevActual: "", liqActual: "", foodActual: "", scActual: "", covers: "", deliveryOrders: "", deliveryRevenue: "" };
+  const [form, setForm] = useState(blank);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState("");
+
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setSaved(false);
+    setErr("");
+  };
+
+  const existing = dailyEntries.find(e => e.outletId === form.outletId && e.date === form.date);
+
+  const save = () => {
+    if (!form.outletId) { setErr("Select an outlet."); return; }
+    if (!form.date) { setErr("Select a date."); return; }
+    const n = k => Number(form[k]) || 0;
+    const rec = {
+      id: existing?.id || getId(),
+      outletId: form.outletId,
+      date: form.date,
+      bevActual: n("bevActual"),
+      liqActual: n("liqActual"),
+      foodActual: n("foodActual"),
+      scActual: n("scActual"),
+      covers: n("covers"),
+      deliveryOrders: n("deliveryOrders"),
+      deliveryRevenue: n("deliveryRevenue")
+    };
+    if (existing) setDailyEntries(p => p.map(e => e.id === existing.id ? rec : e));
+    else setDailyEntries(p => [...p, rec]);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  const numInp = (key, pfx = "₹") => (
+    <div style={{ position: "relative" }}>
+      {pfx && <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 11, pointerEvents: "none" }}>{pfx}</span>}
+      <input type="number" value={form[key]} onChange={e => set(key, e.target.value)} style={{ width: "100%", ...iStyle, paddingLeft: pfx ? "22px" : "10px", boxSizing: "border-box" }} />
+    </div>
+  );
+
+  const rows = [["Beverage", "bevActual"], ["Liquor", "liqActual"], ["Food", "foodActual"], ["Service Charge", "scActual"]];
+
+  const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
+  const selectedMonth = form.date ? new Date(form.date).getMonth() + 1 : null;
+  const selectedYear = form.date ? new Date(form.date).getFullYear() : null;
+  const daysInMonth = selectedMonth && selectedYear ? getDaysInMonth(selectedYear, selectedMonth) : 0;
+
+  const entriesForMonth = dailyEntries.filter(e => {
+    if (!form.outletId) return false;
+    const d = new Date(e.date);
+    return e.outletId === form.outletId && d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear;
+  });
+
+  const monthlyTotals = entriesForMonth.reduce((acc, e) => ({
+    bev: acc.bev + e.bevActual,
+    liq: acc.liq + e.liqActual,
+    food: acc.food + e.foodActual,
+    sc: acc.sc + e.scActual,
+    covers: acc.covers + e.covers,
+    delOrders: acc.delOrders + e.deliveryOrders,
+    delRev: acc.delRev + e.deliveryRevenue
+  }), { bev: 0, liq: 0, food: 0, sc: 0, covers: 0, delOrders: 0, delRev: 0 });
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 14, alignItems: "start" }}>
+      <Card>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+          <div>
+            <Lbl>Outlet</Lbl>
+            <select value={form.outletId} onChange={e => set("outletId", e.target.value)} style={{ width: "100%", ...selStyle }}>
+              <option value="">Select outlet</option>
+              {outlets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <Lbl>Date</Lbl>
+            <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width: "100%", ...iStyle }} />
+          </div>
+        </div>
+
+        {existing && (
+          <div style={{ padding: "9px 12px", background: "#fef9c3", borderRadius: 8, border: "0.5px solid #fde047", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, color: "#854d0e" }}>Entry exists for this date.</span>
+            <button onClick={() => setForm({ outletId: existing.outletId, date: existing.date, bevActual: String(existing.bevActual), liqActual: String(existing.liqActual), foodActual: String(existing.foodActual), scActual: String(existing.scActual), covers: String(existing.covers), deliveryOrders: String(existing.deliveryOrders), deliveryRevenue: String(existing.deliveryRevenue) })} style={{ fontSize: 11, fontWeight: 600, color: "#854d0e", background: "#fde047", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>Load & edit</button>
+          </div>
+        )}
+
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Revenue (INR) - Today's Entry</div>
+        <div style={{ border: "0.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden", marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", background: "#f8fafc", padding: "7px 12px", borderBottom: "0.5px solid #e2e8f0" }}>
+            {["Category", "Actual"].map(h => <div key={h} style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8" }}>{h}</div>)}
+          </div>
+          {rows.map(([label, aK], i) => (
+            <div key={label} style={{ display: "grid", gridTemplateColumns: "130px 1fr", padding: "9px 12px", gap: 8, background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: i < 3 ? "0.5px solid #f1f5f9" : "none", alignItems: "center" }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: "#374151" }}>{label}</div>
+              {numInp(aK)}
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>Operations</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <div><Lbl>Dine-in covers</Lbl>{numInp("covers", "")}</div>
+          <div><Lbl>Delivery orders</Lbl>{numInp("deliveryOrders", "")}</div>
+          <div><Lbl>Delivery revenue</Lbl>{numInp("deliveryRevenue")}</div>
+        </div>
+
+        {err && <div style={{ background: "#fee2e2", border: "0.5px solid #fca5a5", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "#dc2626", marginBottom: 10 }}>{err}</div>}
+        {saved && <div style={{ background: "#dcfce7", border: "0.5px solid #86efac", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "#16a34a", marginBottom: 10 }}>Saved successfully.</div>}
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={save} style={{ flex: 1, background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "10px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{existing ? "Update Entry" : "Save Entry"}</button>
+          <button onClick={() => setForm(blank)} style={{ padding: "10px 14px", background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>Clear</button>
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 10 }}>Monthly Summary</div>
+        {form.outletId && selectedMonth ? (
+          <>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>{MONTHS[selectedMonth - 1]} {selectedYear} • {entriesForMonth.length} of {daysInMonth} days</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <KCard label="Beverage" val={fmt(monthlyTotals.bev)} />
+              <KCard label="Liquor" val={fmt(monthlyTotals.liq)} />
+              <KCard label="Food" val={fmt(monthlyTotals.food)} />
+              <KCard label="Svc Charge" val={fmt(monthlyTotals.sc)} />
+              <KCard label="Covers" val={fmtN(monthlyTotals.covers)} />
+              <KCard label="Del. Rev" val={fmt(monthlyTotals.delRev)} />
+            </div>
+            <div style={{ marginTop: 12, fontSize: 10, color: "#94a3b8" }}>Total: {fmt(monthlyTotals.bev + monthlyTotals.liq + monthlyTotals.food + monthlyTotals.sc)}</div>
+          </>
+        ) : (
+          <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>Select outlet and date to see summary</div>
+        )}
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginTop: 20, marginBottom: 10 }}>Recent daily entries</div>
+        {dailyEntries.length === 0 && <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: "16px 0" }}>No entries yet</div>}
+        {[...dailyEntries].reverse().slice(0, 8).map(e => {
+          const o = outlets.find(x => x.id === e.outletId);
+          const total = e.bevActual + e.liqActual + e.foodActual + e.scActual;
+          return (
+            <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "0.5px solid #f1f5f9" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#0f172a" }}>{o?.name || "?"}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8" }}>{e.date}</div>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a5f" }}>{fmt(total)}</div>
             </div>
           );
         })}
@@ -348,15 +509,55 @@ function CSVUpload({outlets,entries,setEntries,getId}){
   );
 }
 
-function ReportsPage({outlets,entries}){
-  const [filterOutlet,setFilterOutlet]=useState("all");
-  const filtered=filterOutlet==="all"?entries:entries.filter(e=>e.outletId===filterOutlet);
-  const tot=(fn)=>filtered.reduce((s,e)=>s+fn(e),0);
-  const totalActual=tot(e=>e.bevActual+e.liqActual+e.foodActual+e.scActual);
-  const totalBudget=tot(e=>e.bevBudget+e.liqBudget+e.foodBudget+e.scBudget);
-  const totalCovers=tot(e=>e.covers);
-  const totalDel=tot(e=>e.deliveryOrders);
-  const apc=totalCovers>0?Math.round((tot(e=>e.bevActual+e.liqActual+e.foodActual+e.scActual-e.deliveryRevenue))/totalCovers):0;
+function ReportsPage({outlets, entries, dailyEntries }) {
+  const [filterOutlet, setFilterOutlet] = useState("all");
+
+  const aggregatedEntries = useMemo(() => {
+    const map = {};
+    
+    entries.forEach(e => {
+      const key = `${e.outletId}-${e.year}-${e.month}`;
+      if (!map[key]) {
+        map[key] = { outletId: e.outletId, month: e.month, year: e.year, bevActual: 0, liqActual: 0, foodActual: 0, scActual: 0, bevBudget: 0, liqBudget: 0, foodBudget: 0, scBudget: 0, covers: 0, deliveryOrders: 0, deliveryRevenue: 0 };
+      }
+      map[key].bevActual += e.bevActual;
+      map[key].liqActual += e.liqActual;
+      map[key].foodActual += e.foodActual;
+      map[key].scActual += e.scActual;
+      map[key].bevBudget += e.bevBudget;
+      map[key].liqBudget += e.liqBudget;
+      map[key].foodBudget += e.foodBudget;
+      map[key].scBudget += e.scBudget;
+      map[key].covers += e.covers;
+      map[key].deliveryOrders += e.deliveryOrders;
+      map[key].deliveryRevenue += e.deliveryRevenue;
+    });
+    
+    dailyEntries.forEach(e => {
+      const d = new Date(e.date);
+      const key = `${e.outletId}-${d.getFullYear()}-${d.getMonth() + 1}`;
+      if (!map[key]) {
+        map[key] = { outletId: e.outletId, month: d.getMonth() + 1, year: d.getFullYear(), bevActual: 0, liqActual: 0, foodActual: 0, scActual: 0, bevBudget: 0, liqBudget: 0, foodBudget: 0, scBudget: 0, covers: 0, deliveryOrders: 0, deliveryRevenue: 0 };
+      }
+      map[key].bevActual += e.bevActual;
+      map[key].liqActual += e.liqActual;
+      map[key].foodActual += e.foodActual;
+      map[key].scActual += e.scActual;
+      map[key].covers += e.covers;
+      map[key].deliveryOrders += e.deliveryOrders;
+      map[key].deliveryRevenue += e.deliveryRevenue;
+    });
+    
+    return Object.values(map);
+  }, [entries, dailyEntries]);
+
+  const filtered = filterOutlet === "all" ? aggregatedEntries : aggregatedEntries.filter(e => e.outletId === filterOutlet);
+  const tot = (fn) => filtered.reduce((s, e) => s + fn(e), 0);
+  const totalActual = tot(e => e.bevActual + e.liqActual + e.foodActual + e.scActual);
+  const totalBudget = tot(e => e.bevBudget + e.liqBudget + e.foodBudget + e.scBudget);
+  const totalCovers = tot(e => e.covers);
+  const totalDel = tot(e => e.deliveryOrders);
+  const apc = totalCovers > 0 ? Math.round((tot(e => e.bevActual + e.liqActual + e.foodActual + e.scActual - e.deliveryRevenue)) / totalCovers) : 0;
 
   const monthlyData = useMemo(() => {
     const map = {};
