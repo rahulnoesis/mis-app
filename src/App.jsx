@@ -251,11 +251,12 @@ function DailyEntry({outlets, dailyEntries, setDailyEntries, getId}) {
     setErr("");
   };
 
-  const existing = dailyEntries.find(e => e.outletId === form.outletId && e.date === form.date);
+  const existing = dailyEntries.find(e => e.outletId === form.outletId && e.date === String(form.date));
 
   const save = () => {
     if (!form.outletId) { setErr("Select an outlet."); return; }
     if (!form.date) { setErr("Select a date."); return; }
+    if (!form.bevActual && !form.liqActual && !form.foodActual && !form.scActual) { setErr("Enter at least one value."); return; }
     const n = k => Number(form[k]) || 0;
     const rec = {
       id: existing?.id || getId(),
@@ -322,7 +323,7 @@ function DailyEntry({outlets, dailyEntries, setDailyEntries, getId}) {
           </div>
         </div>
 
-        {existing && (
+        {existing && form.bevActual === "" && (
           <div style={{ padding: "9px 12px", background: "#fef9c3", borderRadius: 8, border: "0.5px solid #fde047", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 12, color: "#854d0e" }}>Entry exists for this date.</span>
             <button onClick={() => setForm({ outletId: existing.outletId, date: existing.date, bevActual: String(existing.bevActual), liqActual: String(existing.liqActual), foodActual: String(existing.foodActual), scActual: String(existing.scActual), covers: String(existing.covers), deliveryOrders: String(existing.deliveryOrders), deliveryRevenue: String(existing.deliveryRevenue) })} style={{ fontSize: 11, fontWeight: 600, color: "#854d0e", background: "#fde047", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>Load & edit</button>
