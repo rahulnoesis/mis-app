@@ -46,20 +46,19 @@ export default function App() {
   const getId = () => String(uid.current++);
 
   return (
-    <div style={{fontFamily:"system-ui,sans-serif",background:"#f1f5f9",minHeight:"640px"}}>
+    <div style={{fontFamily:"Montserrat,sans-serif",background:"#f1f5f9",minHeight:"640px"}}>
       <div style={{background:"#fff",borderBottom:"0.5px solid #e2e8f0"}}>
         <div style={{maxWidth:1080,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",height:50}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:26,height:26,background:"#1e3a5f",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{color:"#fff",fontSize:11,fontWeight:700}}>MIS</span>
+            <div style={{width:32,height:32,background:"#39544B",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{color:"#fff",fontSize:12,fontWeight:700}}>N</span>
             </div>
-            <span style={{fontWeight:700,fontSize:14,color:"#0f172a"}}>F&B MIS Platform</span>
-            <span style={{fontSize:10,color:"#64748b",background:"#f1f5f9",padding:"2px 7px",borderRadius:4}}>Prototype</span>
+            <span style={{fontWeight:700,fontSize:15,color:"#0f172a"}}>Noesis Tech MIS Platform</span>
           </div>
           <div style={{flex:1}}/>
           <nav style={{display:"flex",gap:2}}>
             {[["outlets","Outlets"],["entry","Data Entry"],["reports","Reports"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setTab(k)} style={{padding:"5px 14px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:tab===k?600:400,background:tab===k?"#1e3a5f":"transparent",color:tab===k?"#fff":"#64748b"}}>
+              <button key={k} onClick={()=>setTab(k)} style={{padding:"6px 15px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===k?600:400,background:tab===k?"#39544B":"transparent",color:tab===k?"#fff":"#64748b"}}>
                 {l}
               </button>
             ))}
@@ -96,7 +95,7 @@ function OutletsPage({outlets,setOutlets,getId}){
                 {editing===o.id?(
                   <>
                     <input value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&saveEdit()} style={{flex:1,...iStyle}} autoFocus/>
-                    <SB bg="#1e3a5f" col="#fff" onClick={saveEdit}>Save</SB>
+                    <SB bg="#39544B" col="#fff" onClick={saveEdit}>Save</SB>
                     <SB bg="#f1f5f9" col="#64748b" onClick={()=>setEditing(null)}>Cancel</SB>
                   </>
                 ):(
@@ -113,7 +112,7 @@ function OutletsPage({outlets,setOutlets,getId}){
         <Card>
           <Lbl>Outlet name</Lbl>
           <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="e.g. Iktara, MSBC Bandra" style={{width:"100%",...iStyle,boxSizing:"border-box"}}/>
-          <button onClick={add} style={{marginTop:10,width:"100%",background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"9px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Add Outlet</button>
+          <button onClick={add} style={{marginTop:10,width:"100%",background:"#39544B",color:"#fff",border:"none",borderRadius:8,padding:"9px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Add Outlet</button>
           <div style={{marginTop:14,padding:"11px",background:"#f0f9ff",borderRadius:8,border:"0.5px solid #bae6fd"}}>
             <div style={{fontSize:10,fontWeight:600,color:"#0369a1",marginBottom:3}}>Tip</div>
             <div style={{fontSize:11,color:"#0c4a6e",lineHeight:1.6}}>Outlet names appear across all entry forms and reports. You can rename at any time.</div>
@@ -130,7 +129,7 @@ function EntryPage({outlets,entries,setEntries,dailyEntries,setDailyEntries,subT
       <PH title="Data Entry" sub="Add daily or monthly data per outlet"/>
       <div style={{display:"flex",gap:8,marginBottom:16}}>
         {[["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"]].map(([k,l])=>(
-          <button key={k} onClick={()=>setSubTab(k)} style={{padding:"6px 16px",borderRadius:8,border:`0.5px solid ${subTab===k?"#1e3a5f":"#e2e8f0"}`,background:subTab===k?"#1e3a5f":"#fff",color:subTab===k?"#fff":"#64748b",fontSize:12,fontWeight:subTab===k?600:400,cursor:"pointer"}}>{l}</button>
+          <button key={k} onClick={()=>setSubTab(k)} style={{padding:"6px 16px",borderRadius:8,border:`0.5px solid ${subTab===k?"#39544B":"#e2e8f0"}`,background:subTab===k?"#39544B":"#fff",color:subTab===k?"#fff":"#64748b",fontSize:12,fontWeight:subTab===k?600:400,cursor:"pointer"}}>{l}</button>
         ))}
       </div>
       {subTab==="daily"&&<DailyEntry outlets={outlets} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
@@ -213,7 +212,7 @@ function ManualEntry({outlets,entries,setEntries,getId}){
         {err&&<div style={{background:"#fee2e2",border:"0.5px solid #fca5a5",borderRadius:8,padding:"9px 12px",fontSize:12,color:"#dc2626",marginBottom:10}}>{err}</div>}
         {saved&&<div style={{background:"#dcfce7",border:"0.5px solid #86efac",borderRadius:8,padding:"9px 12px",fontSize:12,color:"#16a34a",marginBottom:10}}>Saved successfully. Go to Reports to view.</div>}
         <div style={{display:"flex",gap:8}}>
-          <button onClick={save} style={{flex:1,background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer"}}>{existing?"Update Entry":"Save Entry"}</button>
+          <button onClick={save} style={{flex:1,background:"#39544B",color:"#fff",border:"none",borderRadius:8,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer"}}>{existing?"Update Entry":"Save Entry"}</button>
           <button onClick={()=>setForm(blank)} style={{padding:"10px 14px",background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:8,fontSize:12,cursor:"pointer"}}>Clear</button>
         </div>
       </Card>
@@ -229,7 +228,7 @@ function ManualEntry({outlets,entries,setEntries,getId}){
                 <div style={{fontSize:11,fontWeight:600,color:"#0f172a"}}>{o?.name||"?"}</div>
                 <div style={{fontSize:10,color:"#94a3b8"}}>{MONTHS[e.month-1]} {e.year}</div>
               </div>
-              <div style={{fontSize:11,fontWeight:600,color:"#1e3a5f"}}>{fmt(total)}</div>
+              <div style={{fontSize:11,fontWeight:600,color:"#39544B"}}>{fmt(total)}</div>
             </div>
           );
         })}
@@ -354,7 +353,7 @@ function DailyEntry({outlets, dailyEntries, setDailyEntries, getId}) {
         {saved && <div style={{ background: "#dcfce7", border: "0.5px solid #86efac", borderRadius: 8, padding: "9px 12px", fontSize: 12, color: "#16a34a", marginBottom: 10 }}>Saved successfully.</div>}
 
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={save} style={{ flex: 1, background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "10px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{existing ? "Update Entry" : "Save Entry"}</button>
+          <button onClick={save} style={{ flex: 1, background: "#39544B", color: "#fff", border: "none", borderRadius: 8, padding: "10px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{existing ? "Update Entry" : "Save Entry"}</button>
           <button onClick={() => setForm(blank)} style={{ padding: "10px 14px", background: "#f1f5f9", color: "#64748b", border: "none", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>Clear</button>
         </div>
       </Card>
@@ -389,7 +388,7 @@ function DailyEntry({outlets, dailyEntries, setDailyEntries, getId}) {
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#0f172a" }}>{o?.name || "?"}</div>
                 <div style={{ fontSize: 10, color: "#94a3b8" }}>{e.date}</div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#1e3a5f" }}>{fmt(total)}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#39544B" }}>{fmt(total)}</div>
             </div>
           );
         })}
@@ -448,7 +447,7 @@ function CSVUpload({outlets,entries,setEntries,getId}){
         <Card>
           <div style={{fontSize:13,fontWeight:600,color:"#0f172a",marginBottom:4}}>Step 1: Download template</div>
           <div style={{fontSize:12,color:"#64748b",marginBottom:12,lineHeight:1.6}}>Fill the CSV with your data. One row per outlet per month. Column names must match exactly.</div>
-          <button onClick={downloadTpl} style={{background:"#f1f5f9",border:"0.5px solid #e2e8f0",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:600,color:"#1e3a5f",cursor:"pointer"}}>Download CSV Template</button>
+          <button onClick={downloadTpl} style={{background:"#f1f5f9",border:"0.5px solid #e2e8f0",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:600,color:"#39544B",cursor:"pointer"}}>Download CSV Template</button>
           <div style={{marginTop:12,background:"#f8fafc",borderRadius:8,padding:"10px",fontFamily:"monospace",fontSize:9,color:"#64748b",lineHeight:1.9,wordBreak:"break-all"}}>
             outlet_name, month, year, beverage_actual, beverage_budget, liquor_actual, liquor_budget, food_actual, food_budget, service_charge_actual, service_charge_budget, dine_in_covers, delivery_orders, delivery_revenue
           </div>
@@ -477,7 +476,7 @@ function CSVUpload({outlets,entries,setEntries,getId}){
               <div style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>Preview — {preview.length} row{preview.length!==1?"s":""} ready</div>
               <div style={{fontSize:11,color:"#64748b"}}>Existing entries for the same outlet/month will be overwritten.</div>
             </div>
-            <button onClick={importData} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Import {preview.length} row{preview.length!==1?"s":""}</button>
+            <button onClick={importData} style={{background:"#39544B",color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Import {preview.length} row{preview.length!==1?"s":""}</button>
           </div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
@@ -625,7 +624,7 @@ function ReportsPage({outlets, entries, dailyEntries }) {
             <option value="all">All outlets</option>
             {outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
-          <button onClick={exportCSV} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Export CSV</button>
+          <button onClick={exportCSV} style={{background:"#39544B",color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer"}}>Export CSV</button>
         </div>
       </div>
 
@@ -641,7 +640,7 @@ function ReportsPage({outlets, entries, dailyEntries }) {
           <div style={{fontSize:12,fontWeight:600,color:"#0f172a",marginBottom:2}}>Revenue: actual vs budget</div>
           <div style={{fontSize:10,color:"#94a3b8",marginBottom:10}}>INR Lakhs · monthly</div>
           <div style={{display:"flex",gap:14,marginBottom:10}}>
-            {[["#e2e8f0","Budget"],["#1e3a5f","Actual"]].map(([c,l])=>(
+            {[["#e2e8f0","Budget"],["#39544B","Actual"]].map(([c,l])=>(
               <span key={l} style={{display:"flex",alignItems:"center",gap:5,fontSize:10,color:"#64748b"}}>
                 <span style={{width:9,height:9,borderRadius:2,background:c,display:"inline-block"}}/>
                 {l}
@@ -655,7 +654,7 @@ function ReportsPage({outlets, entries, dailyEntries }) {
               <YAxis tick={{fontSize:10,fill:"#94a3b8"}} axisLine={false} tickLine={false} tickFormatter={v=>`₹${v}L`}/>
               <Tooltip formatter={v=>[`₹${v}L`]} contentStyle={{fontSize:11,borderRadius:8,border:"0.5px solid #e2e8f0"}}/>
               <Bar dataKey="budget" fill="#e2e8f0" radius={[3,3,0,0]}/>
-              <Bar dataKey="actual" fill="#1e3a5f" radius={[3,3,0,0]}/>
+              <Bar dataKey="actual" fill="#39544B" radius={[3,3,0,0]}/>
             </BarChart>
           </ResponsiveContainer>
         </Card>
