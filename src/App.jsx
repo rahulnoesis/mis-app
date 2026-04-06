@@ -72,7 +72,7 @@ export default function App() {
           </div>
           <div style={{flex:1}}/>
           <nav style={{display:"flex",gap:4}}>
-            {[["reports","Dashboard"],["entry","Data Entry"],["outlets","Outlets"],["best","Best Practices"]].map(([k,l])=>(
+            {[["reports","Dashboard"],["entry","Data Entry"],["outlets","Outlets"]].map(([k,l])=>(
               <button key={k} onClick={()=>setTab(k)} style={{padding:"8px 18px",borderRadius:8,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?600:500,background:tab===k?C.primary:"transparent",color:tab===k?"#fff":C.textLight}}>
                 {l}
               </button>
@@ -84,7 +84,6 @@ export default function App() {
         {tab==="reports" && <ReportsPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
         {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
         {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
-        {tab==="best" && <BestPracticesPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
       </div>
     </div>
   );
@@ -144,16 +143,13 @@ function EntryPage({outlets,entries,setEntries,dailyEntries,setDailyEntries,subT
     <div>
       <PH title="Data Entry" sub="Add daily or monthly data per outlet"/>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        {[["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"],["excel","Excel Import"],["ai","AI Query"],["forecast","Forecast"]].map(([k,l])=>(
+        {[["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"]].map(([k,l])=>(
           <button key={k} onClick={()=>setSubTab(k)} style={{padding:"6px 16px",borderRadius:8,border:`0.5px solid ${subTab===k?C.primary:C.border}`,background:subTab===k?C.primary:C.card,color:subTab===k?"#fff":C.textLight,fontSize:13,fontWeight:subTab===k?600:500,cursor:"pointer"}}>{l}</button>
         ))}
       </div>
       {subTab==="daily"&&<DailyEntry outlets={outlets} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
       {subTab==="manual"&&<ManualEntry outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
       {subTab==="csv"&&<CSVUpload outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
-      {subTab==="excel"&&<ExcelImport outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
-      {subTab==="ai"&&<AIQueryPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
-      {subTab==="forecast"&&<ForecastPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
     </div>
   );
 }
