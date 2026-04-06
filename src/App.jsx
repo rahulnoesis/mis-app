@@ -816,6 +816,75 @@ function BestPracticesPage({outlets, entries, dailyEntries}) {
     return list;
   }, [aggregated, outlets]);
 
+  const anomalies = useMemo(() => {
+    const list = [];
+    if (aggregated.length < 2) return list;
+
+    const sorted = [...aggregated].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+
+    for (let i = 1; i < sorted.length; i++) {
+      const curr = sorted[i];
+      const prev = sorted[i - 1];
+      
+      if (curr.outletId !== prev.outletId) continue;
+      
+      const currRev = curr.bevActual + curr.liqActual + curr.foodActual + curr.scActual;
+      const prevRev = prev.bevActual + prev.liqActual + prev.foodActual + prev.scActual;
+      
+      if (prevRev === 0) continue;
+      
+      const pctChange = ((currRev - prevRev) / prevRev) * 100;
+      
+      if (pctChange < -20) {
+        const outlet = outlets.find(o => o.id === curr.outletId);
+        list.push({ type: "danger", title: "Revenue Drop Alert", desc: `${outlet?.name} down ${Math.abs(Math.round(pctChange))}% in ${MONTHS[curr.month-1]} vs ${MONTHS[prev.month-1]}`, metric: `${Math.round(pctChange)}%` });
+      } else if (pctChange > 30) {
+        const outlet = outlets.find(o => o.id === curr.outletId);
+        list.push({ type: "success", title: "Revenue Surge", desc: `${outlet?.name} up ${Math.round(pctChange)}% in ${MONTHS[curr.month-1]}`, metric: `+${Math.round(pctChange)}%` });
+      }
+    }
+
+    entries.forEach(e => {
+      const actual = e.bevActual + e.liqActual + e.foodActual + e.scActual;
+      const budget = e.bevBudget + e.liqBudget + e.foodBudget + e.scBudget;
+      if (budget > 0) {
+        const variance = ((actual - budget) / budget) * 100;
+        if (variance < -25) {
+          const outlet = outlets.find(o => o.id === e.outletId);
+          list.push({ type: "warning", title: "Budget Variance", desc: `${outlet?.name} at ${Math.round(variance)}% of budget in ${MONTHS[e.month-1]}`, metric: `${Math.round(variance)}%` });
+        }
+      }
+    });
+
+    const byOutlet = outlets.map(o => {
+      const oData = aggregated.filter(e => e.outletId === o.id);
+      if (oData.length < 2) return null;
+      const sortedMo = [...oData].sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.month - b.month;
+      });
+      const first = sortedMo[0];
+      const last = sortedMo[sortedMo.length - 1];
+      const firstRev = first.bevActual + first.liqActual + first.foodActual + first.scActual;
+      const lastRev = last.bevActual + last.liqActual + last.foodActual + last.scActual;
+      if (firstRev === 0 || lastRev === 0) return null;
+      const trend = ((lastRev - firstRev) / firstRev) * 100;
+      return { name: o.name, trend };
+    }).filter(Boolean).sort((a, b) => a.trend - b.trend);
+
+    if (byOutlet.length > 0) {
+      const declining = byOutlet.find(o => o.trend < -10);
+      if (declining) {
+        list.push({ type: "warning", title: "Declining Trend", desc: `${declining.name} showing ${Math.round(declining.trend)}% trend over period`, metric: `${Math.round(declining.trend)}%` });
+      }
+    }
+
+    return list;
+  }, [aggregated, entries, outlets]);
+
   const benchmarks = [
     { label: "Target APC", value: "₹2,500-3,500", desc: "Average per cover for F&B" },
     { label: "Food to Bev Ratio", value: "2:1", desc: "Food revenue should be 2x beverages" },
@@ -847,36 +916,60 @@ function BestPracticesPage({outlets, entries, dailyEntries}) {
           )}
         </Card>
         <Card>
-          <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>Industry Benchmarks</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            {benchmarks.map((b, i) => (
-              <div key={i} style={{padding:14,background:C.inputBg,borderRadius:8}}>
-                <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",marginBottom:4}}>{b.label}</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.primary}}>{b.value}</div>
-                <div style={{fontSize:11,color:C.textLight,marginTop:4}}>{b.desc}</div>
-              </div>
-            ))}
+          <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+            Anomaly Alerts
+            {anomalies.length > 0 && <span style={{background:C.negative,color:"#fff",fontSize:10,padding:"2px 8px",borderRadius:10}}>{anomalies.length}</span>}
           </div>
+          {anomalies.length === 0 ? (
+            <div style={{color:C.textMuted,fontSize:13,padding:"20px 0",textAlign:"center"}}>No anomalies detected</div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {anomalies.map((an, i) => (
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:12,background:an.type === "danger" ? "#FEF2F2" : an.type === "warning" ? "#FFFBEB" : "#ECFDF5",borderRadius:8,borderLeft:`3px solid ${an.type === "danger" ? "#DC2626" : an.type === "warning" ? "#F59E0B" : "#10B981"}`}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{an.title}</div>
+                    <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{an.desc}</div>
+                  </div>
+                  <div style={{fontSize:14,fontWeight:700,color:an.type === "danger" ? "#DC2626" : an.type === "warning" ? "#F59E0B" : "#10B981"}}>{an.metric}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
       <Card>
-        <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>AI Recommendations</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-          <div style={{padding:16,background:"linear-gradient(135deg, #2D5A4A 0%, #3D6A5A 100%)",borderRadius:10,color:"#fff"}}>
-            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Forecasting</div>
-            <div style={{fontSize:13,fontWeight:500}}>Predict next month revenue based on trends</div>
-          </div>
-          <div style={{padding:16,background:"linear-gradient(135deg, #374151 0%, #4B5563 100%)",borderRadius:10,color:"#fff"}}>
-            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Anomaly Detection</div>
-            <div style={{fontSize:13,fontWeight:500}}>Alert on unusual spending patterns</div>
-          </div>
-          <div style={{padding:16,background:"linear-gradient(135deg, #BE123C 0%, #9F1239 100%)",borderRadius:10,color:"#fff"}}>
-            <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Cost Optimization</div>
-            <div style={{fontSize:13,fontWeight:500}}>Find areas to reduce operational costs</div>
-          </div>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>Industry Benchmarks</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+          {benchmarks.map((b, i) => (
+            <div key={i} style={{padding:14,background:C.inputBg,borderRadius:8}}>
+              <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",marginBottom:4}}>{b.label}</div>
+              <div style={{fontSize:16,fontWeight:600,color:C.primary}}>{b.value}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:4}}>{b.desc}</div>
+            </div>
+          ))}
         </div>
       </Card>
+
+      <div style={{marginTop:14}}>
+        <Card>
+          <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>AI Recommendations</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+            <div style={{padding:16,background:"linear-gradient(135deg, #2D5A4A 0%, #3D6A5A 100%)",borderRadius:10,color:"#fff"}}>
+              <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Forecasting</div>
+              <div style={{fontSize:13,fontWeight:500}}>Predict next month revenue based on trends</div>
+            </div>
+            <div style={{padding:16,background:"linear-gradient(135deg, #374151 0%, #4B5563 100%)",borderRadius:10,color:"#fff"}}>
+              <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Natural Language</div>
+              <div style={{fontSize:13,fontWeight:500}}>Ask questions about your data in plain English</div>
+            </div>
+            <div style={{padding:16,background:"linear-gradient(135deg, #BE123C 0%, #9F1239 100%)",borderRadius:10,color:"#fff"}}>
+              <div style={{fontSize:12,opacity:0.8,marginBottom:8}}>Data Ingestion</div>
+              <div style={{fontSize:13,fontWeight:500}}>Auto-import from Excel, bank statements, POS</div>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
