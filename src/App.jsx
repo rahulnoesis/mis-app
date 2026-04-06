@@ -33,8 +33,23 @@ const SEED_ENTRIES = [
 const fmt = n => "₹"+(n/100000).toFixed(1)+"L";
 const fmtCr = n => "₹"+(n/10000000).toFixed(2)+"Cr";
 const fmtN = n => (n||0).toLocaleString("en-IN");
+const fmtMono = n => n.toLocaleString("en-IN");
 const varPct = (a,b) => !b ? "—" : ((a-b)/b*100).toFixed(1)+"%";
 const isPos = (a,b) => a >= b;
+
+const C = {
+  bg: "#FAFBFC",
+  card: "#FFFFFF",
+  primary: "#2D5A4A",
+  primaryHover: "#234839",
+  text: "#374151",
+  textLight: "#6B7280",
+  textMuted: "#9CA3AF",
+  border: "#E5E7EB",
+  positive: "#059669",
+  negative: "#BE123C",
+  inputBg: "#F9FAFB",
+};
 
 export default function App() {
   const [tab, setTab] = useState("entry");
@@ -46,26 +61,26 @@ export default function App() {
   const getId = () => String(uid.current++);
 
   return (
-    <div style={{fontFamily:"Montserrat,sans-serif",background:"#f1f5f9",minHeight:"640px"}}>
-      <div style={{background:"#fff",borderBottom:"0.5px solid #e2e8f0"}}>
-        <div style={{maxWidth:1080,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",height:50}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:32,height:32,background:"#39544B",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{color:"#fff",fontSize:12,fontWeight:700}}>N</span>
+    <div style={{fontFamily:"'Inter',sans-serif",background:C.bg,minHeight:"640px"}}>
+      <div style={{background:C.card,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{maxWidth:1080,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",height:56}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:34,height:34,background:C.primary,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 4px rgba(45,90,74,0.2)"}}>
+              <span style={{color:"#fff",fontSize:14,fontWeight:700,"fontFamily":"'Inter',sans-serif"}}>N</span>
             </div>
-            <span style={{fontWeight:700,fontSize:15,color:"#0f172a"}}>Noesis Tech MIS Platform</span>
+            <span style={{fontWeight:600,fontSize:16,color:C.text,letterSpacing:"-0.3px"}}>Noesis Tech MIS Platform</span>
           </div>
           <div style={{flex:1}}/>
-          <nav style={{display:"flex",gap:2}}>
+          <nav style={{display:"flex",gap:4}}>
             {[["outlets","Outlets"],["entry","Data Entry"],["reports","Reports"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setTab(k)} style={{padding:"6px 15px",borderRadius:6,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===k?600:400,background:tab===k?"#39544B":"transparent",color:tab===k?"#fff":"#64748b"}}>
+              <button key={k} onClick={()=>setTab(k)} style={{padding:"8px 18px",borderRadius:8,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?600:500,background:tab===k?C.primary:"transparent",color:tab===k?"#fff":C.textLight}}>
                 {l}
               </button>
             ))}
           </nav>
         </div>
       </div>
-      <div style={{maxWidth:1080,margin:"0 auto",padding:"18px 20px"}}>
+      <div style={{maxWidth:1080,margin:"0 auto",padding:"24px 20px"}}>
         {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
         {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
         {tab==="reports" && <ReportsPage outlets={outlets} entries={entries} dailyEntries={dailyEntries}/>}
@@ -723,18 +738,18 @@ function ReportsPage({outlets, entries, dailyEntries }) {
   );
 }
 
-function Card({children}){return <div style={{background:"#fff",border:"0.5px solid #e2e8f0",borderRadius:12,padding:"14px 16px"}}>{children}</div>;}
-function KCard({label,val,sub,subC="#64748b"}){
+function Card({children}){return <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"16px 20px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>{children}</div>;}
+function KCard({label,val,sub,subC=C.textLight}){
   return(
-    <div style={{background:"#fff",border:"0.5px solid #e2e8f0",borderRadius:12,padding:"12px 14px"}}>
-      <div style={{fontSize:10,fontWeight:500,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:5}}>{label}</div>
-      <div style={{fontSize:20,fontWeight:700,color:"#0f172a",letterSpacing:"-0.5px"}}>{val}</div>
-      {sub&&<div style={{fontSize:10,color:subC,marginTop:3}}>{sub}</div>}
+    <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+      <div style={{fontSize:11,fontWeight:500,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:6}}>{label}</div>
+      <div style={{fontSize:22,fontWeight:700,color:C.text,letterSpacing:"-0.5px","fontFamily":"'JetBrains Mono',monospace"}}>{val}</div>
+      {sub&&<div style={{fontSize:11,color:subC,marginTop:4}}>{sub}</div>}
     </div>
   );
 }
-function PH({title,sub,noMb}){return <div style={{marginBottom:noMb?0:16}}><div style={{fontSize:17,fontWeight:700,color:"#0f172a",letterSpacing:"-0.3px"}}>{title}</div>{sub&&<div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>{sub}</div>}</div>;}
-function Lbl({children}){return <div style={{fontSize:10,fontWeight:600,color:"#64748b",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.03em"}}>{children}</div>;}
-function SB({bg,col,onClick,children}){return <button onClick={onClick} style={{background:bg,color:col,border:"none",borderRadius:6,padding:"4px 9px",fontSize:10,fontWeight:600,cursor:"pointer"}}>{children}</button>;}
-const iStyle={border:"0.5px solid #e2e8f0",borderRadius:8,padding:"7px 10px",fontSize:12,outline:"none"};
-const selStyle={border:"0.5px solid #e2e8f0",borderRadius:8,padding:"7px 10px",fontSize:12,outline:"none",background:"#fff",cursor:"pointer"};
+function PH({title,sub,noMb}){return <div style={{marginBottom:noMb?0:18}}><div style={{fontSize:18,fontWeight:700,color:C.text,letterSpacing:"-0.3px"}}>{title}</div>{sub&&<div style={{fontSize:12,color:C.textLight,marginTop:3}}>{sub}</div>}</div>;}
+function Lbl({children}){return <div style={{fontSize:11,fontWeight:600,color:C.textLight,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.03em"}}>{children}</div>;}
+function SB({bg,col,onClick,children}){return <button onClick={onClick} style={{background:bg,color:col,border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,fontWeight:600,cursor:"pointer"}}>{children}</button>;}
+const iStyle={border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,outline:"none",background:C.inputBg,color:C.text};
+const selStyle={border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 12px",fontSize:13,outline:"none",background:C.card,cursor:"pointer",color:C.text};
