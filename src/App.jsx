@@ -85,6 +85,11 @@ export default function App() {
         {tab==="entry" && <EntryPage outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} subTab={subTab} setSubTab={setSubTab} getId={getId}/>}
         {tab==="outlets" && <OutletsPage outlets={outlets} setOutlets={setOutlets} getId={getId}/>}
       </div>
+      <div style={{maxWidth:1080,margin:"0 auto",padding:"0 20px 24px",textAlign:"center"}}>
+        <div style={{fontSize:11,color:C.textMuted,background:C.inputBg,padding:"10px 16px",borderRadius:8,display:"inline-block"}}>
+          This is only a prototype. Data calculation and storage may be inaccurate.
+        </div>
+      </div>
     </div>
   );
 }
