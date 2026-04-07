@@ -148,10 +148,11 @@ function EntryPage({outlets,entries,setEntries,dailyEntries,setDailyEntries,subT
     <div>
       <PH title="Data Entry" sub="Add daily or monthly data per outlet"/>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        {[["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"]].map(([k,l])=>(
+        {[["chat","Chat Entry"],["daily","Daily Entry"],["manual","Monthly Entry"],["csv","CSV Upload"]].map(([k,l])=>(
           <button key={k} onClick={()=>setSubTab(k)} style={{padding:"6px 16px",borderRadius:8,border:`0.5px solid ${subTab===k?C.primary:C.border}`,background:subTab===k?C.primary:C.card,color:subTab===k?"#fff":C.textLight,fontSize:13,fontWeight:subTab===k?600:500,cursor:"pointer"}}>{l}</button>
         ))}
       </div>
+      {subTab==="chat"&&<ChatEntry outlets={outlets} entries={entries} setEntries={setEntries} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
       {subTab==="daily"&&<DailyEntry outlets={outlets} dailyEntries={dailyEntries} setDailyEntries={setDailyEntries} getId={getId}/>}
       {subTab==="manual"&&<ManualEntry outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
       {subTab==="csv"&&<CSVUpload outlets={outlets} entries={entries} setEntries={setEntries} getId={getId}/>}
@@ -1419,6 +1420,88 @@ function ForecastPage({ outlets, entries, dailyEntries }) {
             )}
           </>
         )}
+      </Card>
+    </div>
+  );
+}
+
+function ChatEntry({ outlets, entries, setEntries, dailyEntries, setDailyEntries, getId }) {
+  const [message, setMessage] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const parseEntry = (text, outlet) => {
+    const t = text.toLowerCase();
+    const data = { outletId: outlet?.id, date: new Date().toISOString().split('T')[0], month: new Date().getMonth() + 1, year: new Date().getFullYear() };
+    const numMatch = (str) => { const nums = str.match(/[\d,]+/g); return nums ? parseInt(nums[0].replace(/,/g, '')) || 0 : 0; };
+    if (t.includes('beverage') || t.includes('bev')) data.bevActual = numMatch(t);
+    if (t.includes('liquor')) data.liqActual = numMatch(t);
+    if (t.includes('food')) data.foodActual = numMatch(t);
+    if (t.includes('service') || t.includes('sc')) data.scActual = numMatch(t);
+    if (t.includes('cover')) data.covers = numMatch(t);
+    if (t.includes('delivery') && t.includes('order')) data.deliveryOrders = numMatch(t);
+    if (t.includes('delivery') && (t.includes('revenue') || t.includes('sale'))) data.deliveryRevenue = numMatch(t);
+    if (t.includes('today')) { data.date = new Date().toISOString().split('T')[0]; }
+    if (t.includes('yesterday')) { const d = new Date(); d.setDate(d.getDate() - 1); data.date = d.toISOString().split('T')[0]; }
+    const monthMatch = t.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
+    if (monthMatch) { const months = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12}; data.month = months[monthMatch[1].toLowerCase()]; data.date = `2025-${String(data.month).padStart(2,'0')}-01`; }
+    return data;
+  };
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+    setChatHistory(prev => [...prev, { role: "user", text: message }]);
+    setMessage("");
+    setLoading(true);
+    setTimeout(() => {
+      const t = message.toLowerCase();
+      let outlet = outlets.find(o => t.includes(o.name.toLowerCase()));
+      if (!outlet && outlets.length > 0) outlet = outlets[0];
+      if (!outlet) { setChatHistory(prev => [...prev, { role: "assistant", text: "Please add an outlet first in the Outlets section." }]); setLoading(false); return; }
+      const data = parseEntry(message, outlet);
+      const total = (data.bevActual||0) + (data.liqActual||0) + (data.foodActual||0) + (data.scActual||0);
+      if (total === 0) { setChatHistory(prev => [...prev, { role: "assistant", text: "Could not detect numbers. Try: 'The Table today - beverage 50000'" }]); setLoading(false); return; }
+      if (data.date && !t.includes('month')) {
+        const existing = dailyEntries.find(e => e.outletId === data.outletId && e.date === data.date);
+        const rec = { id: existing?.id || getId(), ...data };
+        existing ? setDailyEntries(p => p.map(e => e.id === existing.id ? rec : e)) : setDailyEntries(p => [...p, rec]);
+        setChatHistory(prev => [...prev, { role: "assistant", text: `Saved: ${outlet.name} on ${data.date}, Revenue: ₹${fmt(total)}` }]);
+      } else {
+        const existing = entries.find(e => e.outletId === data.outletId && e.month === data.month && e.year === data.year);
+        const rec = { id: existing?.id || getId(), ...data };
+        existing ? setEntries(p => p.map(e => e.id === existing.id ? {...e,...data} : e)) : setEntries(p => [...p, rec]);
+        setChatHistory(prev => [...prev, { role: "assistant", text: `Saved: ${outlet.name} (${MONTHS[data.month-1]} ${data.year}), Revenue: ₹${fmt(total)}` }]);
+      }
+      setLoading(false);
+    }, 800);
+  };
+
+  const suggestions = ["The Table today - beverage 50000 food 120000", "Mg St Colaba May - beverage 1800000", "Add 100 covers to The Table yesterday"];
+
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:14}}>
+      <Card>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:14}}>Chat Entry</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:14}}>Type naturally: "The Table today - beverage 50000 food 120000 covers 150"</div>
+        <div style={{display:"flex",gap:8,marginBottom:12}}>
+          <input type="text" value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSend()} placeholder="Enter data in plain English..." style={{flex:1,...iStyle}} />
+          <button onClick={handleSend} disabled={loading} style={{background:C.primary,color:"#fff",border:"none",borderRadius:8,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>{loading?"...":"Save"}</button>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{suggestions.map((s,i)=>(<button key={i} onClick={()=>setMessage(s)} style={{padding:"6px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:C.card,color:C.textLight,fontSize:11,cursor:"pointer"}}>{s}</button>))}</div>
+        <div style={{marginTop:16,maxHeight:280,overflowY:"auto"}}>
+          {chatHistory.length===0 ? (<div style={{textAlign:"center",color:C.textMuted,fontSize:13,padding:"20px 0"}}>Start typing to add data...</div>) : (chatHistory.map((msg,i)=>(<div key={i} style={{marginBottom:12,display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start"}}><div style={{maxWidth:"80%",padding:"10px 14px",borderRadius:12,fontSize:13,background:msg.role==="user"?C.primary:C.inputBg,color:msg.role==="user"?"#fff":C.text}}>{msg.text}</div></div>)))}
+        </div>
+      </Card>
+      <Card>
+        <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:10}}>Supported Fields</div>
+        <div style={{fontSize:12,color:C.textLight,lineHeight:1.8}}>
+          <div>• <b>Outlet</b> - "The Table"</div>
+          <div>• <b>Date</b> - "today", "yesterday", "May"</div>
+          <div>• <b>Revenue</b> - "beverage 50000"</div>
+          <div>• <b>Covers</b> - "covers 150"</div>
+          <div>• <b>Delivery</b> - "delivery 50 orders"</div>
+        </div>
+        <div style={{marginTop:16,fontSize:11,color:C.textMuted,padding:10,background:C.inputBg,borderRadius:8}}>Tip: "1.5L" = 150000</div>
       </Card>
     </div>
   );
